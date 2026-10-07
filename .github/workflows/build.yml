@@ -1,0 +1,48 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - uses: android-actions/setup-android@v4
+        with:
+          log-accepted-android-sdk-licenses: false
+          packages: >-
+            platform-tools
+            platforms;android-37.0
+            build-tools;37.0.0
+            ndk;29.0.14206865
+
+      - name: Build debug APKs
+        run: ./gradlew --no-daemon assembleDebug
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: moonlight-debug-apks
+          path: app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
